@@ -44,7 +44,7 @@ def overlap_nonu_trap(u1,u2,xa,ya,c=False):
 def normalize(u0,weight=1,normval = 1):
     norm = np.sqrt(normval/overlap(u0,u0,weight))
     u0 *= norm
-    return u0
+    return np.real(u0)
 
 def norm_nonu(u0,weights,normval = 1):
     norm = np.sqrt(normval/overlap_nonu(u0,u0,weights))
