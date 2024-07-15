@@ -44,7 +44,7 @@ iw0 = 600
 zw = sm_ex
 di = 0.75
 dz = 10
-num_PML = 10
+num_PML = 70
 
 lant19_ipos = optics.lant19.get_19port_positions(core_spacing=sm_seperation_final/taper_ratio)
 clad_mm = optics.scaled_cyl([0,0],mm_rclad,sm_offset,nclad,njack,0,scale_func=scale_func,final_scale=1)
