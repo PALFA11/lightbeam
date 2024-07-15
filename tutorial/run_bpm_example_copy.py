@@ -1,5 +1,8 @@
 ''' example script for running the beamprop code in prop.py'''
 import numpy as np
+import sys
+sys.path.append("../src")
+import lightbeam
 from lightbeam.mesh import RectMesh3D
 from lightbeam.prop import Prop3D
 from lightbeam.misc import normalize,overlap_nonu,norm_nonu
@@ -7,34 +10,6 @@ from lightbeam import LPmodes
 import matplotlib.pyplot as plt
 from config_example import *
 
-xw0 = 10  # Placeholder value
-yw0 = 10  # Placeholder value
-zw = 100  # Placeholder value
-ds = 0.1  # Placeholder value
-dz = 0.1  # Placeholder value
-num_PML = 10  # Placeholder value
-xw_func = None  # Placeholder value
-yw_func = None  # Placeholder value
-max_remesh_iters = 10  # Placeholder value
-sig_max = 1.0  # Placeholder value
-wl0 = 1.55e-6  # Placeholder value
-optic = None  # Placeholder value
-n0 = 1.0  # Placeholder value
-  # Placeholder value
-monitor_func = None  # Placeholder value
-writeto = None  # Placeholder value
-ref_val = 1.0  # Placeholder value
-remesh_every = 10  # Placeholder value
-dynamic_n0 = False  # Placeholder value
-fplanewidth = 10  # Placeholder value
-xpos = [0]  # Placeholder value
-ypos = [0]  # Placeholder value
-rcore = 1.0  # Placeholder value
-scale = 1.0  # Placeholder value
-ncore = 1.45  # Placeholder value
-nclad = 1.44  # Placeholder value
-l = 2
-m = 2
 wl = 1.5 # um
 njack = 1.4345
 nclad = 1.44
@@ -46,19 +21,56 @@ sm_rcore = 6.5 # um
 mm_rjack = 76.3 # um
 sm_rclad = 32.8 # um
 sm_seperation_final = 2*60 # um
-u0 = normalize(LPmodes.lpfield(xg,yg,l,m,mm_rclad,wl,nclad,njack))
+sm_offset = 100 # um
+sm_ex = 40000 # um
+scale_func = None
+l = 2
+m = 2
+
+xw_func = None
+yw_func = None
+max_remesh_iters = 10
+sig_max = 1.0
+wl0 = 1.55
+monitor_func = None
+writeto = None
+ref_val = 2e-4
+remesh_every = 10
+dynamic_n0 = False
+fplanewidth = 10
+xpos = [0]
+ypos = [0]
+iw0 = 600
+zw = sm_ex
+di = 0.75
+dz = 10
+num_PML = 10
+
+lant19_ipos = optics.lant19.get_19port_positions(core_spacing=sm_seperation_final/taper_ratio)
+clad_mm = optics.scaled_cyl([0,0],mm_rclad,sm_offset,nclad,njack,0,scale_func=scale_func,final_scale=1)
+clad_sm = optics.scaled_cyl([0,0],sm_rclad,sm_ex,nclad,njack,sm_offset,scale_func=scale_func,final_scale=taper_ratio)
+elmnts = [clad_mm, clad_sm]
+
+for i in range(0,len(lant19_ipos)):
+    core = optics.scaled_cyl(xy=lant19_ipos[i] ,r = sm_rcore/taper_ratio,z_ex = sm_ex,n = ncore,nb = nclad,z_offset=sm_offset,scale_func=scale_func,final_scale=taper_ratio) # fxy=lant19_fpos[i]
+    elmnts.append(core)
+
+optic = optics.OpticSys(elmnts,njack)
+
 
 if __name__ == "__main__":
 
     # mesh initialization (required)
-    mesh = RectMesh3D(xw0,yw0,zw,ds,dz,num_PML,xw_func,yw_func)
+    mesh = RectMesh3D(iw0,iw0,zw,di,dz,num_PML,xw_func,yw_func)
     xg,yg = mesh.xy.xg,mesh.xy.yg
+    xg, yg = mesh.xg[num_PML:-num_PML,num_PML:-num_PML],mesh.yg[num_PML:-num_PML,num_PML:-num_PML]
+    u0 = normalize(LPmodes.lpfield(xg,yg,l,m,mm_rclad,wl,nclad,njack))
 
     mesh.xy.max_iters = max_remesh_iters
     mesh.sigma_max = sig_max
 
     # propagator initialization (required)
-    prop = Prop3D(wl0,mesh,optic,n0)
+    prop = Prop3D(wl0,mesh,optic,nclad)
 
     print('launch field')
     plt.imshow(np.real(u0))

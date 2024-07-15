@@ -9,6 +9,7 @@ import numexpr as ne
 from lightbeam.mesh import RectMesh3D,RectMesh2D
 import lightbeam.optics as optics
 from lightbeam.misc import timeit, overlap, normalize,printProgressBar, overlap_nonu, norm_nonu
+import matplotlib.pyplot as plt
 
 ### to do ###
 
@@ -471,12 +472,13 @@ class Prop3D:
         #get the current IOR dist
         self.set_IORsq(IORsq__,z__)
 
-        #plt.figure(frameon=False)
-        #plt.imshow(xy.get_base_field(IORsq__))
-        #plt.show()
+        # plt.figure(frameon=False)
+        # plt.imshow(xy.get_base_field(IORsq__))
+        # plt.show()
 
         print("initial shape: ",xy.shape)
-        for i in range(total_iters):       
+        for i in range(total_iters):
+               
             if i%20 == 0: 
                 printProgressBar(i,total_iters-1)
             u0 = xy.get_base_field(u)
@@ -542,7 +544,7 @@ class Prop3D:
 
                 #interp the field to the new grid   
                 u = xy.resample_complex(u)
-
+                
                 #give the grid to the optical sys obj so it can compute IORs
                 self.optical_system.set_sampling(xy)
 
