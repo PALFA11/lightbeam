@@ -50,6 +50,30 @@ def save_results(folder, di, dz, initial_conditions, input_light_real, input_lig
     with open(f"{folder}/results_di_{di}_dz_{dz}.json", "w") as f:
         json.dump(results, f, indent=4)
 
+def create_input_mode_field(xg, yg, l_values, m_values, mm_rclad, wl, nclad, njack, amplitudes=None):
+    # Initialize the input mode field to zero
+    u0 = np.zeros_like(xg, dtype=complex)
+    
+    # If amplitudes are not provided, set them to 1 for all modes
+    if amplitudes is None:
+        amplitudes = np.ones(len(l_values))
+    
+    # Loop over the provided l and m values
+    for i, (l, m) in enumerate(zip(l_values, m_values)):
+        # Compute the LP mode field for given l, m
+        lp_mode_field = LPmodes.lpfield(xg, yg, l, m, mm_rclad, wl, nclad, njack)
+        
+        # Normalize the mode field
+        lp_mode_field_normalized = lp_mode_field / np.sqrt(np.sum(np.abs(lp_mode_field)**2))
+        
+        # Add the normalized mode field to u0 with the corresponding amplitude
+        u0 += amplitudes[i] * lp_mode_field_normalized
+    
+    # Normalize the resulting input mode field
+    u0 = u0 / np.sqrt(np.sum(np.abs(u0)**2))
+    
+    return u0
+
 def run_simulation(di, dz, results_folder):
     wl = 1.5  # um
     njack = 1.4345
@@ -64,8 +88,9 @@ def run_simulation(di, dz, results_folder):
     sm_offset = 500  # um
     sm_ex = 40000  # um
     scale_func = None
-    l = 2
-    m = 2
+    ls = [0,1,2]
+    ms = [1,2,3]
+    amplitudes = np.linspace(1.5,0.5,9)
     xw_func = None
     yw_func = None
     wl0 = 1.5
@@ -104,10 +129,13 @@ def run_simulation(di, dz, results_folder):
 
     # Save initial conditions
     initial_conditions = {
-        "l": l,
-        "m": m,
+        "ls": ls,
+        "ms": ms,
+        "amplitudes": amplitudes,
         "ref_val": ref_val,
         "remesh_every": remesh_every,
+        "iw0":iw0,
+        "num_PML" : num_PML,
         "di": di,
         "dz": dz,
         "mesh_shape": mesh.xy.shape,
@@ -125,8 +153,10 @@ def run_simulation(di, dz, results_folder):
     # Initialize propagator
     prop = Prop3D(wl0, mesh, optic, nclad)
 
-    u0 = normalize(LPmodes.lpfield(xg, yg, l, m, mm_rclad, wl, nclad, njack))  # (1 + 0j) * 
+    u0 = create_input_mode_field(xg, yg, ls, ms, mm_rclad, wl, nclad, njack, amplitudes=amplitudes)  # (1 + 0j) * 
     print(u0.shape)
+    # plt.imshow(np.abs(u0))
+    # plt.show()
     input_light_real = np.real(u0).tolist()
     input_light_imag = np.imag(u0).tolist()
 
@@ -173,9 +203,10 @@ def run_simulation(di, dz, results_folder):
 def main():
     # Define the range of di and dz values for the grid search
     max_threads = 4  # Limit to 4 threads
-    di_values = [0.6, 0.65, 0.7,0.75,0.8,0.85,0.9,0.95]
-    dz_values = [2.5,3,3.25,3.5,3.75,4,4.5]
-    results_folder = "grid_search_results_testings"
+    di_values = [0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5]
+    dz_values = [7.5, 6, 5.5, 5, 4.5, 4, 3.75, 3.5, 3.25, 3, 2.5]
+
+    results_folder = "uniform"
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
         futures = [executor.submit(run_simulation, di, dz, results_folder) for di in di_values for dz in dz_values]
